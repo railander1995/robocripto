@@ -55,19 +55,26 @@ for moeda in dados:
     vol = moeda.get('total_volume', 0)
     var = moeda.get('price_change_percentage_24h', 0)
 
-    if mc and vol and var is not None:
+    if all([
+        isinstance(mc, (int, float)) and mc > 0,
+        isinstance(vol, (int, float)) and vol > 0,
+        isinstance(var, (int, float))
+    ]):
         entrada = pd.DataFrame([[mc, vol, var]], columns=['market_cap', 'volume_24h', 'price_change_24h'])
-        potencial = modelo.predict_proba(entrada)[0][1] * 100
-
-        resultados.append({
-            'Nome': moeda.get('name', ''),
-            'Símbolo': moeda.get('symbol', '').upper(),
-            'Preço (USD)': moeda.get('current_price', 0),
-            'Market Cap': mc,
-            'Volume 24h': vol,
-            'Variação 24h (%)': var,
-            'Potencial (%)': round(potencial, 2)
-        })
+        try:
+            potencial = modelo.predict_proba(entrada)[0][1] * 100
+            resultados.append({
+                'Nome': moeda.get('name', ''),
+                'Símbolo': moeda.get('symbol', '').upper(),
+                'Preço (USD)': moeda.get('current_price', 0),
+                'Market Cap': mc,
+                'Volume 24h': vol,
+                'Variação 24h (%)': var,
+                'Potencial (%)': round(potencial, 2)
+            })
+        except Exception as e:
+            st.warning(f"Erro ao calcular potencial para {moeda.get('name', '???')}: {e}")
+            continue
 
 df = pd.DataFrame(resultados)
 df_filtrado = df[df['Potencial (%)'] > 50].sort_values(by='Potencial (%)', ascending=False)
