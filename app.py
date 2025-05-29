@@ -6,9 +6,8 @@ from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
 st.set_page_config(page_title="RoboCrypto IA", layout="wide")
-st.title("🤖 Robô Cripto com IA - Detecção de Moedas com Potencial")
+st.title("🤖 Robô Cripto com IA - Análise com CoinMarketCap API")
 
-# Treinamento direto no app (evita erro com .pkl)
 @st.cache_resource
 def treinar_modelo():
     X = np.array([
@@ -26,40 +25,37 @@ def treinar_modelo():
 
 modelo = treinar_modelo()
 
-def buscar_criptos():
-    url = "https://api.coingecko.com/api/v3/coins/markets"
+def buscar_criptos_cmc():
+    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
+    headers = {
+        "Accepts": "application/json",
+        "X-CMC_PRO_API_KEY": "5b3fec01-ef41-4918-a9c2-0f991fccf35a"
+    }
     params = {
-        "vs_currency": "usd",
-        "order": "market_cap_asc",
-        "per_page": 50,
-        "page": 1,
-        "sparkline": False
+        "start": "1",
+        "limit": "50",
+        "convert": "USD"
     }
     try:
-        r = requests.get(url, params=params, timeout=10)
+        r = requests.get(url, headers=headers, params=params, timeout=10)
         r.raise_for_status()
-        return r.json()
-    except requests.exceptions.HTTPError as e:
-        if r.status_code == 429:
-            st.warning("⚠️ Limite de requisições excedido (Erro 429). Tente novamente em alguns minutos.")
-        else:
-            st.error(f"Erro HTTP: {e}")
-        return []
+        return r.json().get("data", [])
     except requests.exceptions.RequestException as e:
-        st.error(f"Erro na conexão com a API CoinGecko: {e}")
+        st.error(f"Erro na conexão com a CoinMarketCap API: {e}")
         return []
 
-dados = buscar_criptos()
+dados = buscar_criptos_cmc()
 if not isinstance(dados, list) or not dados:
-    st.warning("Nenhum dado disponível. A API pode estar temporariamente indisponível.")
+    st.warning("Nenhum dado disponível no momento. Tente novamente mais tarde.")
     st.stop()
 
 resultados = []
 
 for moeda in dados:
-    mc = moeda.get('market_cap', 0)
-    vol = moeda.get('total_volume', 0)
-    var = moeda.get('price_change_percentage_24h', 0)
+    quote = moeda.get("quote", {}).get("USD", {})
+    mc = quote.get("market_cap", 0)
+    vol = quote.get("volume_24h", 0)
+    var = quote.get("percent_change_24h", 0)
 
     if all([
         isinstance(mc, (int, float)) and mc > 0,
@@ -72,7 +68,7 @@ for moeda in dados:
             resultados.append({
                 'Nome': moeda.get('name', ''),
                 'Símbolo': moeda.get('symbol', '').upper(),
-                'Preço (USD)': moeda.get('current_price', 0),
+                'Preço (USD)': quote.get('price', 0),
                 'Market Cap': mc,
                 'Volume 24h': vol,
                 'Variação 24h (%)': var,
@@ -83,7 +79,6 @@ for moeda in dados:
             continue
 
 df = pd.DataFrame(resultados)
-
 if df.empty or 'Potencial (%)' not in df.columns:
     st.warning("Nenhum dado processado com sucesso. Tente novamente mais tarde.")
     st.stop()
