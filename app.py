@@ -35,10 +35,19 @@ def buscar_criptos():
         "page": 1,
         "sparkline": False
     }
-    r = requests.get(url, params=params)
-    return r.json()
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Erro na conexão com a API CoinGecko: {e}")
+        return []
 
 dados = buscar_criptos()
+if not isinstance(dados, list):
+    st.error("Erro ao obter dados da API. Tente novamente mais tarde.")
+    st.stop()
+
 resultados = []
 
 for moeda in dados:
