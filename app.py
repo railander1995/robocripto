@@ -60,9 +60,9 @@ for moeda in dados:
         potencial = modelo.predict_proba(entrada)[0][1] * 100
 
         resultados.append({
-            'Nome': moeda['name'],
-            'Símbolo': moeda['symbol'].upper(),
-            'Preço (USD)': moeda['current_price'],
+            'Nome': moeda.get('name', ''),
+            'Símbolo': moeda.get('symbol', '').upper(),
+            'Preço (USD)': moeda.get('current_price', 0),
             'Market Cap': mc,
             'Volume 24h': vol,
             'Variação 24h (%)': var,
