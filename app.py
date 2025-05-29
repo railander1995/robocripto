@@ -1,18 +1,30 @@
 
 import streamlit as st
 import pandas as pd
-import pickle
 import requests
+from sklearn.ensemble import RandomForestClassifier
+import numpy as np
 
 st.set_page_config(page_title="RoboCrypto IA", layout="wide")
 st.title("🤖 Robô Cripto com IA - Detecção de Moedas com Potencial")
 
-@st.cache_data
-def carregar_modelo():
-    with open("modelo_ia.pkl", "rb") as file:
-        return pickle.load(file)
+# Treinamento direto no app (evita erro com .pkl)
+@st.cache_resource
+def treinar_modelo():
+    X = np.array([
+        [1e6, 2e6, 12.3],
+        [5e6, 1.5e6, 8.4],
+        [2e7, 0.5e6, -5.2],
+        [3e6, 3e6, 6.1],
+        [8e6, 1.2e6, 7.9],
+        [1e7, 1.1e6, -1.0]
+    ])
+    y = [1, 1, 0, 1, 1, 0]
+    modelo = RandomForestClassifier(n_estimators=100, random_state=42)
+    modelo.fit(X, y)
+    return modelo
 
-modelo = carregar_modelo()
+modelo = treinar_modelo()
 
 def buscar_criptos():
     url = "https://api.coingecko.com/api/v3/coins/markets"
