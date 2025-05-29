@@ -39,13 +39,19 @@ def buscar_criptos():
         r = requests.get(url, params=params, timeout=10)
         r.raise_for_status()
         return r.json()
+    except requests.exceptions.HTTPError as e:
+        if r.status_code == 429:
+            st.warning("⚠️ Limite de requisições excedido (Erro 429). Tente novamente em alguns minutos.")
+        else:
+            st.error(f"Erro HTTP: {e}")
+        return []
     except requests.exceptions.RequestException as e:
         st.error(f"Erro na conexão com a API CoinGecko: {e}")
         return []
 
 dados = buscar_criptos()
-if not isinstance(dados, list):
-    st.error("Erro ao obter dados da API. Tente novamente mais tarde.")
+if not isinstance(dados, list) or not dados:
+    st.warning("Nenhum dado disponível. A API pode estar temporariamente indisponível.")
     st.stop()
 
 resultados = []
@@ -77,6 +83,11 @@ for moeda in dados:
             continue
 
 df = pd.DataFrame(resultados)
+
+if df.empty or 'Potencial (%)' not in df.columns:
+    st.warning("Nenhum dado processado com sucesso. Tente novamente mais tarde.")
+    st.stop()
+
 df_filtrado = df[df['Potencial (%)'] > 50].sort_values(by='Potencial (%)', ascending=False)
 
 st.dataframe(df_filtrado, use_container_width=True)
